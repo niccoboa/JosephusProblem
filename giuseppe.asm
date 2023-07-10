@@ -1,10 +1,10 @@
 TITLE giuseppe.asm: Esame Calcolatori del 07/07/2023
 
 comment *
-		Programma assembler 8086 che calcola la lista degli eliminati del gioco di Giuseppe
+		Programma assembler 8086 che calcola la lista degli eliminati del gioco di Giuseppe (Josephus Problem)
 
-		data creazione: sabato 08 luglio 2023
-		ultime modifiche: domenica 09 luglio 2023
+		data creazione: domenica 09 luglio 2023
+		ultime modifiche: lunedi 10 luglio 2023
 *
 
 
@@ -13,14 +13,14 @@ comment *
 CR EQU 13                      ; carriage return
 LF EQU 10                      ; line feed
 DOLLAR EQU '$'
-K EQU 6
+K EQU 3   				 ; valore di 'offset' del gioco
 
 
 ;-----------------------------------------------------------------
 ;    M  A  C  R  O
 ;-----------------------------------------------------------------
 
-display macro xxxx           ; N.B. ogni stringa deve terminare con '$' 
+display macro xxxx         
         push dx
 	    push ax
 	    mov dx,offset xxxx
@@ -59,16 +59,20 @@ DATI SEGMENT PUBLIC 'DATA'    ; segmento dati
 	COMMA db ',', DOLLAR
 	SPACE db ' ', DOLLAR
 
-	V db 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16, '$'
+	V db 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41, '$'
 	N equ $-V-1
-	;K db 3 						; valore di 'offset' del gioco
 
-	LIST db N dup('*'), '$' 				; lista eliminati (all'inizio a zero)
+	; copy/paste: 17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41
+	; K è dichiarato tra le costanti
+
+	LIST db N dup('0'), '$' 		   	; lista eliminati (all'inizio a zero)
 
 	CHAR db '??', '$' 				; struttura di appoggio per stampare le cifre
 
-	msg_giocatori db "Lista : ", '$'		; lista giocatori
-	msg_eliminati db "Fuori : ", '$'		; lista giocatori eliminati
+	msg_inizio db "Inizio: ", '$'
+	msg_giocatori db "Lista: ", '$'		; lista giocatori
+	msg_eliminati db "Fuori: ", '$'		; lista giocatori eliminati
+
 
 	MAX db ?
 
@@ -87,8 +91,8 @@ CSEG SEGMENT PUBLIC 'CODE'
 			situazione_iniziale:
 				display msg_giocatori
 				print V
-				display msg_eliminati
-				print LIST
+				;display msg_eliminati
+				;print LIST
 
 			XOR BX, BX
 			XOR DL, DL
@@ -97,37 +101,60 @@ CSEG SEGMENT PUBLIC 'CODE'
 			MOV SI, 0
 			MOV BL, K
 
-			MOV CX, N
+			MOV CH, N
 			algo:
-				ADD DI, K
+				;ADD DI, K 			; sarebbe facile così
+				CMP CH, N
+				JNE volte_successive
 
-				adjust:
-					CMP DI, N
-					JLE last_check
-					SUB DI, N
-				
-				last_check:
-					CMP V[DI-1], '*'
-					JNE elimina
-					INC DI
-					JMP adjust
+				prima_volta:
+					ADD DI, K
+					DEC DI
+					JMP elimina
+
+				volte_successive:
+					MOV CL, K 
+					cicla:
+						CMP CL, 0
+						JE elimina
+						INC DI
+						check:
+							CMP DI, N
+							JGE adjust
+
+							CMP V[DI], '0'
+							JE skip
+
+							DEC CL
+							JMP cicla
+
+						adjust:
+							MOV DI, 0
+							JMP check
+
+						skip:
+							INC DI
+							JMP check	
+
 
 				elimina:
-					MOV AL, V[DI-1]
+					MOV AL, V[DI]
 					MOV AH, LIST[SI]			
 					
-					MOV V[DI-1], AH
+					MOV V[DI], AH
 					MOV LIST[SI], AL
 
 				incr_and_loop:
 					INC SI
-					LOOP algo
+					DEC CH
+					JNZ algo
+					;LOOP algo
 
-			display CRLF
-			display msg_giocatori
-			print V
+
+			
 			display msg_eliminati
 			print LIST
+
 					
 		exit: 
         		MOV AH,4CH                 ; ritorno al DOS
@@ -155,7 +182,7 @@ CSEG SEGMENT PUBLIC 'CODE'
 
 			MOV DX, [DI]
 
-			CMP DL, '*'
+			CMP DL, '0'
 			JE put_asterisco
 
 			put_cifre:
@@ -202,4 +229,4 @@ CSEG SEGMENT PUBLIC 'CODE'
 
 cseg ends
 
-END MAIN                     ; il programma comincia all'indirizzo di MAIN
+END MAIN               
